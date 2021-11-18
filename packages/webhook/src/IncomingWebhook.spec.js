@@ -105,6 +105,31 @@ describe('IncomingWebhook', function () {
     });
   });
 
+  describe('has an option to override the Axios timeout value', function () {
+    beforeEach(function () {
+      this.statusCode = 408;
+      this.scope = nock('https://hooks.slack.com')
+        .post(/services/)
+        .reply(this.statusCode);
+    });
+
+    it('should throw error if timeout exceeded', function (done) {
+      const timeoutOverride = 1; // ms, guaranteed failure
+
+      const webhook = new IncomingWebhook(url, {
+        timeout: timeoutOverride,
+      });
+
+      const result = webhook.send('Hello');
+      return result.catch((error) => {
+        assert.instanceOf(error, Error);
+        assert.equal(error.code, ErrorCode.RequestError);
+        assert.instanceOf(error.original, Error);
+        assert.equal(error.original.config.timeout, timeoutOverride);
+      });
+    });
+  });
+
   afterEach(function () {
     nock.cleanAll();
   });
